@@ -4,15 +4,22 @@ import android.app.Notification;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleEventObserver;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ProcessLifecycleOwner;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class LiteDownloadService extends Service implements DownloadService {
+public class LiteDownloadService extends Service implements DownloadService, LifecycleEventObserver {
 
     private static final long TEN_MINUTES_IN_MILLIS = TimeUnit.MINUTES.toMillis(10);
     private static final String WAKELOCK_TAG = "liteDownloadService:wakelocktag";
@@ -20,22 +27,36 @@ public class LiteDownloadService extends Service implements DownloadService {
     private ExecutorService executor;
     private IBinder binder;
     private PowerManager.WakeLock wakeLock;
+    private Boolean appIsInForeground;
 
     @Override
     public void onCreate() {
         super.onCreate();
         executor = Executors.newSingleThreadExecutor();
         binder = new DownloadServiceBinder();
+        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
     }
 
     @Override
     public void start(int id, Notification notification) {
-        startForeground(id, notification);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || (appIsInForeground != null && appIsInForeground)) {
+            startForeground(id, notification);
+        }
     }
 
     @Override
     public void stop(boolean removeNotification) {
         stopForeground(removeNotification);
+    }
+
+    @Override
+    public void onStateChanged(@NonNull LifecycleOwner source, @NonNull Lifecycle.Event event) {
+        if (event == Lifecycle.Event.ON_RESUME) {
+            appIsInForeground = true;
+        }
+        if (event == Lifecycle.Event.ON_PAUSE) {
+            appIsInForeground = false;
+        }
     }
 
     class DownloadServiceBinder extends Binder {
