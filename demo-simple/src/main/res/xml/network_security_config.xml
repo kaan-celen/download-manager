@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<network-security-config xmlns:tools="http://schemas.android.com/tools">
-  <base-config cleartextTrafficPermitted="true"
-    tools:ignore="InsecureBaseConfiguration" />
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true">
+    <trust-anchors>
+      <certificates src="system" />
+      <!-- This network security configuration is only used on Android 7.0+ to allow using Charles with HTTPS -->
+      <certificates overridePins="true" src="user" />
+      <certificates overridePins="true" src="@raw/automation_ca_cert" />
+    </trust-anchors>
+  </base-config>
 </network-security-config>
+
