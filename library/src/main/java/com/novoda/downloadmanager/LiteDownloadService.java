@@ -1,5 +1,7 @@
 package com.novoda.downloadmanager;
 
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
+
 import android.app.Notification;
 import android.app.Service;
 import android.content.Intent;
@@ -40,7 +42,11 @@ public class LiteDownloadService extends Service implements DownloadService, Lif
     @Override
     public void start(int id, Notification notification) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || (appIsInForeground != null && appIsInForeground)) {
-            startForeground(id, notification);
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                startForeground(id, notification);
+            } else {
+                startForeground(id, notification, FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            }
         }
     }
 
