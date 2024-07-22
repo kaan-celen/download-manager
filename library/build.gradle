@@ -1,5 +1,4 @@
 apply plugin: 'com.android.library'
-//apply plugin: 'bintray-release'
 apply plugin: 'jacoco'
 apply plugin: 'com.novoda.build-properties'
 
@@ -7,39 +6,16 @@ buildProperties {
     cli {
         using(project)
     }
-    bintray {
-        def bintrayCredentials = {
-            boolean isDryRun = cli['dryRun'].or(true).boolean
-            return isDryRun ?
-                    ['bintrayOrg': 'n/a', 'bintrayRepo': 'n/a', 'bintrayUser': 'n/a', 'bintrayKey': 'n/a'] :
-                    new File("${System.getenv('BINTRAY_PROPERTIES')}")
-        }
-        using(bintrayCredentials()).or(cli)
-        description = '''This should contain the following properties:
-                       | - bintrayOrg: name of the Bintray organisation to deploy the artifacts to
-                       | - bintrayRepo: name of the repo of the organisation to deploy the artifacts to
-                       | - bintrayUser: name of the account used to deploy the artifacts
-                       | - bintrayKey: API key of the account used to deploy the artifacts
-        '''.stripMargin()
-    }
-    publish {
-        def generateVersion = {
-            boolean isSnapshot = cli['bintraySnapshot'].or(false).boolean
-            return isSnapshot ? "DEVELOP-${System.getenv('BUILD_NUMBER') ?: 'LOCAL'}" : version
-        }
-        using(['version': "${generateVersion()}"])
-                .or(buildProperties.bintray)
-    }
 }
 
 android {
     namespace 'com.novoda.downloadmanager'
-    compileSdkVersion 33
-    buildToolsVersion '33.0.1'
+    compileSdk 33
 
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 33
+        buildToolsVersion = "33.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         javaCompileOptions {
             annotationProcessorOptions {
@@ -67,6 +43,12 @@ android {
     }
 }
 
+repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+}
+
 dependencies {
     def roomVersion = "2.4.3"
 
@@ -81,17 +63,3 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:4.1.0'
     testImplementation 'com.google.truth:truth:1.0'
 }
-
-//publish {
-//    userOrg = buildProperties.publish['bintrayOrg'].string
-//    repoName = buildProperties.publish['bintrayRepo'].string
-//    groupId = 'com.novoda'
-//    artifactId = 'download-manager'
-//    version = buildProperties.publish['version'].string
-//    bintrayUser = buildProperties.publish['bintrayUser'].string
-//    bintrayKey = buildProperties.publish['bintrayKey'].string
-//    publishVersion = version
-//    uploadName = 'download-manager'
-//    desc = 'A library that handles long-running downloads'
-//    website = 'https://github.com/novoda/download-manager'
-//}
