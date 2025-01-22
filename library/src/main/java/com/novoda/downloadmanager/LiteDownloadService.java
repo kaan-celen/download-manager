@@ -2,6 +2,7 @@ package com.novoda.downloadmanager;
 
 import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
 
+import android.app.ForegroundServiceStartNotAllowedException;
 import android.app.Notification;
 import android.app.Service;
 import android.content.Intent;
@@ -41,12 +42,16 @@ public class LiteDownloadService extends Service implements DownloadService, Lif
 
     @Override
     public void start(int id, Notification notification) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || (appIsInForeground != null && appIsInForeground)) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                startForeground(id, notification);
-            } else {
-                startForeground(id, notification, FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            startAsForegroundService(id, notification);
+        } else if (isAppForeground()) {
+            try {
+                startAsForegroundService(id, notification);
+            } catch (ForegroundServiceStartNotAllowedException e) {
+                Logger.e(e, "Failure to start as Foreground service with notification from background");
             }
+        } else {
+            Logger.e("Failure to start as Foreground service. Does not meet requirements.");
         }
     }
 
@@ -90,6 +95,21 @@ public class LiteDownloadService extends Service implements DownloadService, Lif
         });
     }
 
+    private boolean isAppForeground() {
+        return appIsInForeground != null && appIsInForeground;
+    }
+
+    private void startAsForegroundService(int id, Notification notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Apps built with SDK version Build. VERSION_CODES. Q or later can specify
+            // the foreground service types using attribute android. R. attr. foregroundServiceType
+            // in service element of manifest file.
+            startForeground(id, notification, FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        } else {
+            startForeground(id, notification);
+        }
+    }
+
     private void acquireCpuWakeLock() {
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         if (powerManager != null) {
@@ -107,11 +127,13 @@ public class LiteDownloadService extends Service implements DownloadService, Lif
     @Override
     public void onDestroy() {
         executor.shutdown();
+        ProcessLifecycleOwner.get().getLifecycle().removeObserver(this);
         super.onDestroy();
     }
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);
+        stopSelf();
     }
 }
